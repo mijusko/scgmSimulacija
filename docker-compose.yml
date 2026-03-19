@@ -1,0 +1,47 @@
+version: '3.8'
+
+services:
+  # Kontejner za Bazu Podataka
+  db:
+    image: mysql:8.0
+    container_name: sim_db
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: simulacija
+      MYSQL_USER: worker_app
+      MYSQL_PASSWORD: worker_password
+    volumes:
+      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - lan_network
+    ports:
+      - "3306:3306" # Otvaramo port da bismo mogli sa spolja da pisemo upite
+
+  # Kontejner za PHP App
+  app:
+    build:
+      context: ./php
+    container_name: sim_app
+    volumes:
+      - ./app:/var/www/html
+    networks:
+      - lan_network
+    depends_on:
+      - db
+
+  # Kontejner za Firewall (Nginx)
+  firewall:
+    image: nginx:latest
+    container_name: sim_firewall
+    ports:
+      - "8080:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    networks:
+      - lan_network
+    depends_on:
+      - app
+
+networks:
+  lan_network:
+    driver: bridge
